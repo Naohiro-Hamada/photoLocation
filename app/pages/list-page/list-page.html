@@ -1,0 +1,28 @@
+<ion-navbar *navbar>
+
+  <ion-title>List</ion-title>
+  
+  <ion-buttons end (click)="openCamera()">
+    <button royal>
+      <ion-icon name="camera"></ion-icon>
+    </button>
+  </ion-buttons>
+
+</ion-navbar>
+
+<ion-content>
+ 
+  <ion-list>
+    <ion-item *ngFor="let photo of photos">
+      <ion-thumbnail item-left (click)="openPicture(photo)">
+        <img src="{{photo.src}}">
+      </ion-thumbnail>
+      <p>{{photo.date}}</p>
+      <h3>{{photo.place}}</h3>
+      <!--<h3>緯度：{{photo.latitude}}</h3>
+      <h3>経度：{{photo.longitude}}</h3>-->
+      <button clear item-right (click)="openMap(photo)">Map</button>
+    </ion-item>
+  </ion-list>
+    
+</ion-content>
