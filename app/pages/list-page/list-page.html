@@ -13,6 +13,7 @@
 <ion-content>
  
   <ion-list>
+    <div id="map_canvas"></div>
     <ion-item *ngFor="let photo of photos">
       <ion-thumbnail item-left (click)="openPicture(photo)">
         <img src="{{photo.src}}">

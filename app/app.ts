@@ -10,7 +10,7 @@ import {ListPage} from './pages/list-page/list-page';
 })
 export class MyApp {
 
-  private rootPage:any;
+  private rootPage: any;
 
   constructor(private platform:Platform) {
     // this.rootPage = TabsPage;

@@ -2,16 +2,19 @@ import {Component, OnInit} from '@angular/core';
 import {NavController, Platform} from 'ionic-angular';
 import {Photo} from '../../models/photo';
 import {File, Camera} from 'ionic-native';
-// import {Map} from '../map/map';
-// import {Picture} from '../picture/picture';
 
 declare var cordova: any;
+declare var plugin: any;
 
 @Component({
   templateUrl: 'build/pages/list-page/list-page.html',
 })
 export class ListPage implements OnInit{
+
   private photos: Photo[];
+  private map;
+  private init: boolean;
+
   private locations: {place: string, latitude: number, longitude: number}[] = [
     {place: '鹿児島県鹿児島市鴨池新町５−１', latitude: 31.555588, longitude: 130.557102},
     {place: '鹿児島県鹿児島市鴨池新町１０−１', latitude: 31.560146, longitude:130.557978},
@@ -26,30 +29,36 @@ export class ListPage implements OnInit{
     {place: '北海道札幌市中央区北１条西２丁目', latitude: 43.062562, longitude:141.353650},
     {place: '長崎県佐世保市ハウステンボス町８', latitude: 33.086348, longitude:129.787219}
   ];
-  
-  constructor(private _navController: NavController, private platForm: Platform) {
-    this.photos = [];
+
+  static get parameters() {
+    return [[NavController], [Platform]];
   }
-  
+
+  constructor(private _navController, private _platform) {
+    this.photos = [];
+    this.map = plugin.google.maps.Map.getMap();
+    this.init = true;
+  }
+
   ngOnInit() {
-    
-    this.platForm.ready().then(() => {
-      
+
+    this._platform.ready().then(() => {
+
       File.listDir(cordova.file.dataDirectory, '')
       .then(entrys => {
-        
+
         let promises: any[] = [];
         let photo: Photo;
         for (let i = 0; i < entrys.length; i++) {
           if (entrys[i].isFile) {
-        
+
             let location = this.getLocation();
             photo = new Photo();
-            photo.src = entrys[i].toUrl();            
+            photo.src = entrys[i].toURL();            
             photo.place =  location.place;
             photo.longitude = location.longitude; // 経度
-            photo.latitude = location.latitude;  // 緯度
-            
+            photo.latitude = location.latitude;   // 緯度
+
             this.photos.unshift(photo);
             promises.unshift(this.getModificationTime(entrys[i]));
           }
@@ -62,14 +71,13 @@ export class ListPage implements OnInit{
         }
       })
       .catch(error => console.log(error));
-      
-    });
 
+    });
   }
-  
+
   openCamera() {
 
-    this.platForm.ready().then(() => {
+    this._platform.ready().then(() => {
 
       let tempDirectory: string = cordova.file.externalApplicationStorageDirectory + 'cache/';
       let options: any = {
@@ -77,8 +85,8 @@ export class ListPage implements OnInit{
         destinationType: Camera.DestinationType.FILE_URI,
         sourceType: Camera.PictureSourceType.CAMERA
       };
-      
-      if (this.platForm.is('ios')) {
+
+      if (this._platform.is('ios')) {
         options.sourceType = Camera.PictureSourceType.PHOTOLIBRARY;
         tempDirectory = cordova.file.tempDirectory;
       } 
@@ -98,7 +106,7 @@ export class ListPage implements OnInit{
         }
       })
       .then(entry => {
-        
+
         const location = this.getLocation();
         let photo: Photo = new Photo();
         photo.src = entry.toURL();
@@ -106,24 +114,24 @@ export class ListPage implements OnInit{
         photo.longitude = location.longitude; // 経度
         photo.latitude = location.latitude;  // 緯度
         this.photos.unshift(photo);
-        
+
         return this.getModificationTime(entry);
       })
       .then(modificationTime => {
         this.photos[0].date = '' + modificationTime;
       })
       .catch(error => console.log(error));
-      
+
     });
-    
+
   }
-  
+
   getLocation(): {place: string, latitude: number, longitude: number} {
     return this.locations[Math.floor(Math.random() * this.locations.length)];
   }
-  
+
   getModificationTime(entry: any): any {
-    
+
     var resolveFn, rejectFn;
     var promise = new Promise(function (resolve, reject) { resolveFn = resolve; rejectFn = reject; });
     entry.getMetadata(meta => {
@@ -131,17 +139,46 @@ export class ListPage implements OnInit{
     }, error  => {
       rejectFn(error);
     });
-    
+
     return promise;
   }
-  
+
   openPicture(photo) {
     // 写真画面に移動
     // this._navController.push(Picture, {photo: photo});
   }
-  
+
   openMap(photo) {
+    // console.log('openMap start');
     // マップ画面に移動
-    // this._navController.push(Map, {photo: photo});
+    //this._navController.push(MapPage, {photo: photo});
+
+    this._platform.ready().then(() => {
+
+      this.map = plugin.google.maps.Map.getMap();
+
+      this.map.addEventListener(plugin.google.maps.event.MAP_READY, () => {        
+
+        if (this.init) {
+          this.map.setCenter(new plugin.google.maps.LatLng(31.555588, 130.557102));
+          this.map.setZoom(12);
+        }
+        this.map.setMapTypeId(plugin.google.maps.MapTypeId.ROADMAP);
+        this.map.showDialog();
+        this.init = false;
+
+        let center = new plugin.google.maps.LatLng(photo.latitude, photo.longitude);
+        this.map.addMarker({
+          position: center,
+          title: photo.place
+        }, marker => {
+          this.map.animateCamera({
+            zoom: 12,
+            target: center
+          }, () => marker.showInfoWindow());
+        });
+      });
+
+    });
   }
 }
